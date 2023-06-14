@@ -22,6 +22,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -76,7 +77,7 @@ public class AuthorizationServerConfig {
     // @formatter:off
     http
         .exceptionHandling(exceptions ->
-            exceptions.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+            exceptions.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login.html"))
         )
         .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
     // @formatter:on
@@ -89,15 +90,31 @@ public class AuthorizationServerConfig {
   public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
       throws Exception {
     http
+        .csrf().disable()
+        .authorizeRequests()
+        .requestMatchers( "/public/**").permitAll()
+        .requestMatchers("/error*").permitAll()
+        .anyRequest().authenticated()
+        .and()
+        .formLogin()
+        .loginPage("/login.html")
+        .failureUrl("/login.html-error.html")
+        .permitAll();
+
+
+/*
+    http
         .authorizeHttpRequests((authorize) -> authorize
             .anyRequest().authenticated()
         )
-        // Form login handles the redirect to the login page from the
+        // Form login.html handles the redirect to the login.html page from the
         // authorization server filter chain
         .formLogin(Customizer.withDefaults())
         .csrf().disable();
+*/
 
     return http.build();
+
   }
 
 //  @Bean
