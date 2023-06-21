@@ -3,6 +3,7 @@ package com.example.authorizaioinservertest.config;
 import com.example.authorizaioinservertest.repository.UserProfileDao;
 import com.example.authorizaioinservertest.repository.UserProfileEntity;
 import com.example.authorizaioinservertest.service.RegisteredClientService;
+import com.example.authorizaioinservertest.service.UserRepositoryUserDetailsService;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -16,16 +17,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -45,6 +50,18 @@ public class AuthorizationServerConfig {
 
   @Autowired
   private RegisteredClientService registeredClientService;
+
+  @Value("${ldap.manager.dn:}")
+  private String ldapManagerDn;
+
+  @Value("${ldap.manager.password:}")
+  private String ldapManagerPassword;
+
+  @Autowired
+  private UserRepositoryUserDetailsService userRepositoryUserDetailsService;
+
+//  @Autowired
+//  private DaoAuthenticationProvider daoAuthenticationProvider;
 
   @Bean
   @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -94,6 +111,7 @@ public class AuthorizationServerConfig {
         .authorizeRequests()
         .requestMatchers( "/public/**").permitAll()
         .requestMatchers("/error*").permitAll()
+        .requestMatchers("/logout").permitAll()
         .anyRequest().authenticated()
         .and()
         .formLogin()
@@ -116,6 +134,42 @@ public class AuthorizationServerConfig {
     return http.build();
 
   }
+
+  @Autowired
+  public void configure(AuthenticationManagerBuilder auth) throws Exception {
+    auth
+        .ldapAuthentication()
+        .contextSource()
+        .url("ldap://10.35.1.203:3268/dc=fit,dc=com")
+        .managerDn(ldapManagerDn)
+        .managerPassword(ldapManagerPassword)
+        .and()
+        .userSearchFilter("sAMAccountName={0}");
+
+    auth.userDetailsService(userRepositoryUserDetailsService).passwordEncoder(getPasswordEncoder());
+//    auth.
+//    auth.authenticationProvider(daoAuthenticationProvider);
+  }
+//  @Autowired
+//  public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
+//    auth.userDetailsService(userRepositoryUserDetailsService).passwordEncoder(getPasswordEncoder());
+//  }
+
+//  @Bean
+//  public <CustomLdapUserDetailsMapper> ActiveDirectoryLdapAuthenticationProvider getAdAuthProvider(CustomLdapUserDetailsMapper customLdapUserDetailsMapper) {
+//    ActiveDirectoryLdapAuthenticationProvider authProvider = new ActiveDirectoryLdapAuthenticationProvider(domain, urls);
+//    authProvider.setSearchFilter("(&(objectClass=user)(sAMAccountName={1}))");
+//    authProvider.setUserDetailsContextMapper(customLdapUserDetailsMapper);
+//    return authProvider;
+//  }
+//
+//  @Bean
+//  public <CustomDatabaseUserDetailsService> DaoAuthenticationProvider getDaoAuthProvider(CustomDatabaseUserDetailsService customDatabaseUserDetailsService) {
+//    DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+//    provider.setUserDetailsService(userRepositoryUserDetailsService);
+//    provider.setPasswordEncoder(getPasswordEncoder());
+//    return provider;
+//  }
 
 //  @Bean
 //  public UserDetailsService userDetailsService() {

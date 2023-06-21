@@ -1,20 +1,32 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+<html lang="en">
 <head>
-  <title>Login page</title>
-  <!--<link th:href="@{/public/style.css}" rel="stylesheet" />-->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <title>Please sign in</title>
+  <link th:href="@{/public/bootstrap.min.css}" rel="stylesheet" />
+  <link th:href="@{/public/signin.css}" rel="stylesheet" />
+  <!--<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous"> -->
+  <!--<link href="https://getbootstrap.com/docs/4.0/examples/signin/signin.css" rel="stylesheet" crossorigin="anonymous"/> -->
 </head>
 <body>
-<div id="container">
-  <h2>Login page V1</h2>
-  <form th:action="@{/login.html}" method="post">
-    <label for="username">Username</label>
-    <input type="text" id="username" name="username" autofocus="autofocus" />
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" />
-    <input id="submit" type="submit" value="Log in" />
+<div class="container">
+  <form class="form-signin" method="post" th:action="@{/login.html}">
+    <h2 class="form-signin-heading">登入</h2>
+    <div th:if="${loginError}" class="alert alert-danger" role="alert">使用者名稱或密碼錯誤</div>
+    <p>
+      <label for="username" class="sr-only">Username</label>
+      <input type="text" id="username" name="username" class="form-control" placeholder="Username" required autofocus>
+    </p>
+    <p>
+      <label for="password" class="sr-only">Password</label>
+      <input type="password" id="password" name="password" class="form-control" placeholder="Password" required>
+    </p>
+    <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
   </form>
-  <p th:if="${loginError}" class="error">Wrong user or password</p>
+  <!--<p th:if="${loginError}" class="error">Wrong user or password</p>-->
 </div>
-</body>
-</html>
+</body></html>
