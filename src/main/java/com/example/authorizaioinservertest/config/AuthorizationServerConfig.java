@@ -85,8 +85,8 @@ public class AuthorizationServerConfig {
                 //claims.put("accessToken", accessToken);
                 claims.put("sub",
                     oidcUserInfoAuthenticationContext.getAuthorization().getPrincipalName());
-                claims.put("name", userProfile.getUsername());
-                claims.put("email", userProfile.getEmail());
+                claims.put("name", oidcUserInfoAuthenticationContext.getAuthorization().getPrincipalName());
+//                claims.put("email", userProfile.getEmail());
                 return new OidcUserInfo(claims);
               }));
         });
