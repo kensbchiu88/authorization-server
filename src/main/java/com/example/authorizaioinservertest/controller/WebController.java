@@ -1,16 +1,24 @@
 package com.example.authorizaioinservertest.controller;
 
+import com.example.authorizaioinservertest.service.LdapService;
+import com.example.authorizaioinservertest.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class WebController {
+
+  @Autowired
+  private UserService userService;
+
+  @Autowired
+  private LdapService ldapService;
+
   // Login form
   @RequestMapping("/login.html")
   public String login() {
@@ -28,12 +36,12 @@ public class WebController {
   public void exit(HttpServletRequest request, HttpServletResponse response) {
     // token can be revoked here if needed
     new SecurityContextLogoutHandler().logout(request, null, null);
-
-//    try {
-//      //sending back to client app
-//      response.sendRedirect(request.getHeader("referer"));
-//    } catch (IOException e) {
-//      e.printStackTrace();
-//    }
   }
+
+//  @GetMapping("/")
+//  @ResponseBody
+//  public String index() {
+//    User user = this.userService.getByWorkerId("admin");
+//    return "Welcome to the home page! " + user.getName();
+//  }
 }

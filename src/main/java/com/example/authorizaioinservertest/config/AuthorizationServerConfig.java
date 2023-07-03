@@ -1,9 +1,10 @@
 package com.example.authorizaioinservertest.config;
 
 import com.example.authorizaioinservertest.repository.UserProfileDao;
-import com.example.authorizaioinservertest.repository.UserProfileEntity;
 import com.example.authorizaioinservertest.service.RegisteredClientService;
 import com.example.authorizaioinservertest.service.UserRepositoryUserDetailsService;
+import com.example.authorizaioinservertest.service.UserService;
+import com.example.authorizaioinservertest.service.UserService.User;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -22,15 +23,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -51,6 +48,11 @@ public class AuthorizationServerConfig {
   @Autowired
   private RegisteredClientService registeredClientService;
 
+  @Value("${ldap.url:}")
+  private String ldapUrl;
+
+  @Value("${ldap.base:}")
+  private String ldapBase;
   @Value("${ldap.manager.dn:}")
   private String ldapManagerDn;
 
@@ -60,33 +62,25 @@ public class AuthorizationServerConfig {
   @Autowired
   private UserRepositoryUserDetailsService userRepositoryUserDetailsService;
 
-//  @Autowired
-//  private DaoAuthenticationProvider daoAuthenticationProvider;
+  @Autowired
+  private UserService userService;
 
   @Bean
   @Order(Ordered.HIGHEST_PRECEDENCE)
   public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
       throws Exception {
-//    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//    String currentPrincipleName = authentication.getName();
-//    System.out.println("----currentPrincipleName----" + currentPrincipleName);
-
     OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
     http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-        //.oidc(Customizer.withDefaults());	// Enable OpenID Connect 1.0
         .oidc(oidc -> {
           oidc.userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint.userInfoMapper(
               oidcUserInfoAuthenticationContext -> {
-                UserProfileEntity userProfile = this.userProfileDao.findByUsername(
+                User user = this.userService.getByWorkerId(
                     oidcUserInfoAuthenticationContext.getAuthorization().getPrincipalName());
-                OAuth2AccessToken accessToken = oidcUserInfoAuthenticationContext.getAccessToken();
                 Map<String, Object> claims = new HashMap<>();
-//                        claims.put("url", "https://github.com/ITLab1024");
-                //claims.put("accessToken", accessToken);
                 claims.put("sub",
                     oidcUserInfoAuthenticationContext.getAuthorization().getPrincipalName());
-                claims.put("name", oidcUserInfoAuthenticationContext.getAuthorization().getPrincipalName());
-//                claims.put("email", userProfile.getEmail());
+                claims.put("name", user.getName());
+                claims.put("email", user.getEmail());
                 return new OidcUserInfo(claims);
               }));
         });
@@ -109,7 +103,7 @@ public class AuthorizationServerConfig {
     http
         .csrf().disable()
         .authorizeRequests()
-        .requestMatchers( "/public/**").permitAll()
+        .requestMatchers("/public/**").permitAll()
         .requestMatchers("/error*").permitAll()
         .requestMatchers("/logout").permitAll()
         .anyRequest().authenticated()
@@ -118,18 +112,6 @@ public class AuthorizationServerConfig {
         .loginPage("/login.html")
         .failureUrl("/login.html-error.html")
         .permitAll();
-
-
-/*
-    http
-        .authorizeHttpRequests((authorize) -> authorize
-            .anyRequest().authenticated()
-        )
-        // Form login.html handles the redirect to the login.html page from the
-        // authorization server filter chain
-        .formLogin(Customizer.withDefaults())
-        .csrf().disable();
-*/
 
     return http.build();
 
@@ -140,101 +122,17 @@ public class AuthorizationServerConfig {
     auth
         .ldapAuthentication()
         .contextSource()
-        .url("ldap://10.35.1.203:3268/dc=fit,dc=com")
+        .url(ldapUrl + ldapBase)
         .managerDn(ldapManagerDn)
         .managerPassword(ldapManagerPassword)
         .and()
         .userSearchFilter("sAMAccountName={0}");
 
     auth.userDetailsService(userRepositoryUserDetailsService).passwordEncoder(getPasswordEncoder());
-//    auth.
-//    auth.authenticationProvider(daoAuthenticationProvider);
   }
-//  @Autowired
-//  public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-//    auth.userDetailsService(userRepositoryUserDetailsService).passwordEncoder(getPasswordEncoder());
-//  }
-
-//  @Bean
-//  public <CustomLdapUserDetailsMapper> ActiveDirectoryLdapAuthenticationProvider getAdAuthProvider(CustomLdapUserDetailsMapper customLdapUserDetailsMapper) {
-//    ActiveDirectoryLdapAuthenticationProvider authProvider = new ActiveDirectoryLdapAuthenticationProvider(domain, urls);
-//    authProvider.setSearchFilter("(&(objectClass=user)(sAMAccountName={1}))");
-//    authProvider.setUserDetailsContextMapper(customLdapUserDetailsMapper);
-//    return authProvider;
-//  }
-//
-//  @Bean
-//  public <CustomDatabaseUserDetailsService> DaoAuthenticationProvider getDaoAuthProvider(CustomDatabaseUserDetailsService customDatabaseUserDetailsService) {
-//    DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-//    provider.setUserDetailsService(userRepositoryUserDetailsService);
-//    provider.setPasswordEncoder(getPasswordEncoder());
-//    return provider;
-//  }
-
-//  @Bean
-//  public UserDetailsService userDetailsService() {
-//    UserDetails userDetails = User.withDefaultPasswordEncoder()
-//        .username("admin")
-//        .password("1111")
-//        .roles("USER")
-//        .build();
-//
-//    return new InMemoryUserDetailsManager(userDetails);
-//        /*
-//        UserDetails user2 = User.withDefaultPasswordEncoder()
-//                .username("test")
-//                .password("test")
-//                .roles("USER")
-//                .build();
-//        return new InMemoryUserDetailsManager(user,user2);
-//         */
-//  }
 
   @Bean
   public RegisteredClientRepository registeredClientRepository() {
-    /*
-    RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
-        .clientId("dmp-api")
-        .clientSecret(new BCryptPasswordEncoder().encode("1111"))
-        .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-        .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-        .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-        .redirectUri("http://127.0.0.1:8000/login/oauth2/code/articles-client-oidc")
-        .redirectUri("http://127.0.0.1:8001/token")
-        .redirectUri("http://127.0.0.1:8000/authorized")
-        //.redirectUri("http://127.0.0.1:8000/gettoken")
-        //.redirectUri("http://172.20.10.2:3000/login/generic_oauth")
-        //.redirectUri("http://localhost:3000/login/generic_oauth")
-        .scope(OidcScopes.OPENID)
-        .scope(OidcScopes.PROFILE)
-//        .scope("articles.read")
-        //.scope("message.write")
-        .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
-        .tokenSettings(tokenSettings())
-        .build();
-
-    RegisteredClient registeredClient1 = RegisteredClient.withId(UUID.randomUUID().toString())
-        .clientId("grafana")
-        .clientSecret(new BCryptPasswordEncoder().encode("1111"))
-        .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-        .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-        .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-        .redirectUri("http://127.0.0.1:8000/login/oauth2/code/grafana-oidc")
-        .redirectUri("http://127.0.0.1:8001/token")
-//        .redirectUri("http://127.0.0.1:8000/authorized")
-        .redirectUri("http://172.20.10.3:3000/login/generic_oauth")
-        .scope(OidcScopes.OPENID)
-        .scope(OidcScopes.PROFILE)
-        .scope("articles.read")
-        .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
-        .tokenSettings(tokenSettings())
-        .build();
-
-    return new InMemoryRegisteredClientRepository(registeredClient, registeredClient1);
-    */
-
     return new InMemoryRegisteredClientRepository(this.registeredClientService.getAll());
   }
 
@@ -277,12 +175,4 @@ public class AuthorizationServerConfig {
   PasswordEncoder getPasswordEncoder() {
     return new BCryptPasswordEncoder();
   }
-
-  /*
-  @Bean
-  public TokenSettings tokenSettings() {
-    return TokenSettings.builder().accessTokenTimeToLive(Duration.ofMinutes(60L)).build();
-  }
-
-   */
 }
