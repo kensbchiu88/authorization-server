@@ -119,6 +119,8 @@ public class AuthorizationServerConfig {
 
   @Autowired
   public void configure(AuthenticationManagerBuilder auth) throws Exception {
+    auth.userDetailsService(userRepositoryUserDetailsService).passwordEncoder(getPasswordEncoder());
+
     auth
         .ldapAuthentication()
         .contextSource()
@@ -127,8 +129,6 @@ public class AuthorizationServerConfig {
         .managerPassword(ldapManagerPassword)
         .and()
         .userSearchFilter("sAMAccountName={0}");
-
-    auth.userDetailsService(userRepositoryUserDetailsService).passwordEncoder(getPasswordEncoder());
   }
 
   @Bean
